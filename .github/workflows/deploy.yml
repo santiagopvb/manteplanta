@@ -1,13 +1,10 @@
 name: Deploy
-
 on:
   push:
     branches:
       - main
-
 permissions:
   contents: write
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -17,6 +14,40 @@ jobs:
         with:
           node-version: '20'
       - run: cd manteplanta && npm install && npm run build
+
+      # Crear el archivo iniciar.bat dentro del dist
+      - name: Crear iniciar.bat
+        run: |
+          cat > manteplanta/dist/iniciar.bat << 'EOF'
+          @echo off
+          echo Iniciando APP-Nuevos Desarrollos...
+          where python >nul 2>&1
+          if %errorlevel% == 0 (
+              start "" "http://localhost:8080"
+              timeout /t 2 >nul
+              python -m http.server 8080 --directory "%~dp0"
+          ) else (
+              where py >nul 2>&1
+              if %errorlevel% == 0 (
+                  start "" "http://localhost:8080"
+                  timeout /t 2 >nul
+                  py -m http.server 8080 --directory "%~dp0"
+              ) else (
+                  echo ERROR: Python no esta instalado.
+                  echo Instálalo desde https://www.python.org
+                  pause
+              )
+          )
+          EOF
+
+      # Deploy a GitHub Pages (igual que antes)
       - uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: manteplanta/dist
+
+      # Exportar el ZIP descargable
+      - name: Empaquetar para uso local
+        uses: actions/upload-artifact@v4
+        with:
+          name: APP-Nuevos-Desarrollos
+          path: manteplanta/dist/
